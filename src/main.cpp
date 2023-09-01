@@ -1,8 +1,10 @@
 #include <Arduino.h>
 
-// inisialiasai sensor gas  dan sensor api 
+// inisialiasai sensor gas, sensor api, dan sensor ultrasonik
 #define readsensorgas 32
 #define readsensorfire 4
+#define trigPin 2
+#define echoPin 3
 
 // kalibrasi sensor gas 
 float vin = 3.3;
@@ -15,9 +17,14 @@ float ambang_nilai_gas_aman = 200.0;
 float ambang_nilai_gas_normal = 1000.0;
 float ambang_nilai_gas_berbahaya = 5000.0;
 
+// menentukan ambang batas jarak api
+float ambang_jarak_api = 20.0;
+
 // void setup
 void setup() {
   Serial.begin(9600);
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
 }
 
 //Read ADC sensor gas dan sensor api
@@ -50,7 +57,7 @@ void loop() {
   Serial.println(nilaiADCgas);
   Serial.println("Deteksi Api: " + String(nilaiapi == HIGH ? "Ya" : "Tidak"));
 
-  // membuat kondisi dimana jika membaca adanya gas dan api 
+  // membuat pengkondisian
   // Kondisi untuk mendeteksi konsentrasi gas LPG
   if (nilaippmgas < ambang_nilai_gas_aman) {
     Serial.println("Konsentrasi Gas Aman");
@@ -62,5 +69,5 @@ void loop() {
     Serial.println("Konsentrasi Gas Berbahaya");
   }
 
-  // membuat kondisi sensor 
+  // membuat kondisi sensor api dengan sensor ultrasonik untuk mendetksi jarak api
 }
