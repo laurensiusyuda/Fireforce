@@ -15,7 +15,6 @@ float ambang_nilai_gas_aman = 200.0;
 float ambang_nilai_gas_normal = 1000.0;
 float ambang_nilai_gas_berbahaya = 5000.0;
 
-
 // void setup
 void setup() {
   Serial.begin(9600);
@@ -51,7 +50,6 @@ void loop() {
   Serial.println(nilaiADCgas);
   Serial.println("Deteksi Api: " + String(nilaiapi == HIGH ? "Ya" : "Tidak"));
 
-
   // membuat kondisi dimana jika membaca adanya gas dan api 
   // Kondisi untuk mendeteksi konsentrasi gas LPG
   if (nilaippmgas < ambang_nilai_gas_aman) {
@@ -63,4 +61,6 @@ void loop() {
   } else {
     Serial.println("Konsentrasi Gas Berbahaya");
   }
+
+  // membuat kondisi sensor 
 }
