@@ -27,20 +27,33 @@ void setup() {
   pinMode(echoPin, INPUT);
 }
 
-//Read ADC sensor gas dan sensor api
+//Read ADC sensor gas
 float baca_nilai_adc(int pin){
   int nilaiADC = analogRead(pin);
   return nilaiADC;
 }
 
-// ADC Konversi ppm
+// Read sensor gas (ADC konversi)
 float baca_nilai_gas(int pin){
   int range = analogRead(pin);
   float ppm = (range/totalbit)*(vin/vref)*rangeADC;
   return ppm;
 }
 
-// read sensor api
+// baca sensor ultrasonik 
+float baca_jarak() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  long duration = pulseIn(echoPin, HIGH);
+  // Calculate distance in centimeters based on the speed of sound
+  float distance = duration * 0.034 / 2;
+  return distance;
+}
+
+// baca sensor api 
 float baca_nilai_api(){
   int fireStatus = digitalRead(readsensorfire);
   return fireStatus;
@@ -51,6 +64,7 @@ void loop() {
   float nilaiADCgas = baca_nilai_adc(readsensorgas);
   float nilaippmgas = baca_nilai_gas(nilaiADCgas);
   float nilaiapi = baca_nilai_api();
+  float jarak = baca_jarak();
 
   // tampilkan pada serial print 
   Serial.println(nilaippmgas);
