@@ -46,20 +46,20 @@ void setup() {
   pinMode(buzzerPin, OUTPUT);
 }
 
-//Read ADC sensor gas
+//Membaca ADC sensor gas
 float baca_nilai_adc(int pin){
   int nilaiADC = analogRead(pin);
   return nilaiADC;
 }
 
-// Read sensor gas (ADC konversi)
+//Membaca sensor gas (ADC konversi)
 float baca_nilai_gas(int pin){
   int range = analogRead(pin);
   float ppm = (range/totalbit)*(vin/vref)*rangeADC;
   return ppm;
 }
 
-// baca sensor ultrasonik 
+//Membaca sensor ultrasonik 
 float baca_jarak() {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -72,7 +72,7 @@ float baca_jarak() {
   return distance;
 }
 
-// baca sensor api 
+//Membaca sensor api 
 float baca_nilai_api(){
   int fireStatus = digitalRead(readsensorfire);
   return fireStatus;
@@ -107,7 +107,24 @@ void loop() {
   float nilaiapi = baca_nilai_api();
   float jarak = baca_jarak();
 
-  // memanggil fungsi time interupt agar tidak mengganu proses dalam loop
+  //Output buzzer, Mengendalikan buzzer berdasarkan kondisi sensor
+  if (nilaiapi == HIGH && jarak <= ambang_jarak_api && nilaippmgas > ambang_nilai_gas_berbahaya ) {
+    // Jika sensor api mendeteksi api, aktifkan buzzer
+    digitalWrite(buzzerPin, HIGH);
+  } else if (nilaiapi == LOW && nilaippmgas > ambang_nilai_gas_berbahaya) {
+    // Jika tidak ada deteksi api, namun konsentrasi gas berbahaya, aktifkan buzzer
+    digitalWrite(buzzerPin, HIGH);
+  } else {
+    // Untuk kondisi lain, matikan buzzer
+    digitalWrite(buzzerPin, LOW);
+  }
+  
+  // Tampilkan data pada serial print 
+  Serial.println(nilaippmgas);
+  Serial.println(nilaiADCgas);
+  Serial.println("Deteksi Api: " + String(nilaiapi == HIGH ? "Ya" : "Tidak"));
+
+  // menggunakan fungsi time interupt agar tidak mengganggu proses dalam loop
   if (flagEksekusiLCD == true)
   {
     flagEksekusiLCD = false;
@@ -116,59 +133,49 @@ void loop() {
     {
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("ADC Gas: ");      
+      lcd.print(": ");      
       lcd.print(nilaiADCgas);
       lcd.setCursor(0, 1);
       lcd.print("Nilai PPM Gas: ");      
       lcd.print(nilaippmgas);
       // Kondisi untuk mendeteksi konsentrasi gas LPG
-      if (nilaippmgas < ambang_nilai_gas_aman) 
+      if (nilaippmgas < ambang_nilai_gas_aman) {
+        lcd.print("Konsentrasi Gas Aman");} 
+        else if (nilaippmgas < ambang_nilai_gas_normal)  {
+        lcd.print("Konsentrasi Gas Normal");} 
+        else if (nilaippmgas < ambang_nilai_gas_berbahaya){
+          lcd.print("Konsentrasi Gas Berpotensi Bahaya");}
+          else {lcd.print("Konsentrasi Gas Berbahaya");}
+    }
+    // tampilkan pada lcd sensor api dan sensor ultrasonik (halaman 2)
+    else if (halaman == 2)
+    {
+      if (nilaiapi == HIGH)
       {
-        lcd.print("Konsentrasi Gas Aman");
-        } 
-        else if (nilaippmgas < ambang_nilai_gas_normal)
-        {
-          lcd.print("Konsentrasi Gas Normal");
-          } 
-          else if (nilaippmgas < ambang_nilai_gas_berbahaya)
-          {
-            lcd.print("Konsentrasi Gas Berpotensi Bahaya");
-            } else 
-            {
-              lcd.print("Konsentrasi Gas Berbahaya");
-              }
-              }
-              // tampilkan pada lcd sensor api dan sensor ultrasonik (halaman 2)
-              else if (halaman == 2)
-              {
-                lcd.clear();
-                lcd.setCursor(0, 0);
-                lcd.print("ADC Gas: ");      
-                lcd.print(nilaiADCgas);
-                lcd.setCursor(0, 1);
-                lcd.print("Nilai PPM Gas: ");      
-                lcd.print(nilaippmgas);
-                }
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Nilai Api : 1 (Terdeteksi)");      
+      }else
+      {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Nilai Api : 0 (Tdk Terdeteksi)");      
+      }
+      // membuat kondisi sensor api dengan sensor ultrasonik untuk mendetksi jarak api
+      if (jarak < ambang_jarak_api && nilaiapi == HIGH) {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Api Terdeteksi Dalam Jangkuan");
+        lcd.print(jarak);
+        lcd.print(" cm");
+        } else if (nilaiapi == HIGH) {
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("Api Terdeteksi Di Luar Jangkuan");
+          } else {
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.print("No Fire Detected");}
+      }
   }
-
-
-
-  // membuat kondisi sensor api dengan sensor ultrasonik untuk mendetksi jarak api
-  if (jarak < ambang_jarak_api && nilaiapi == HIGH) {
-    Serial.println("Fire Detected at Close Range!");
-    digitalWrite(buzzerPin, HIGH);
-    // Add actions or alarms for fire detection at close range here.
-  } else if (nilaiapi == HIGH) {
-    Serial.println("Fire Detected!");
-    // Add actions or alarms for fire detection here.
-  } else {
-    Serial.println("No Fire Detected");
-  }
-  delay(1000); // Delay for 1 second before checking again
-
-  // tampilkan pada serial print 
-  Serial.println(nilaippmgas);
-  Serial.println(nilaiADCgas);
-  Serial.println("Deteksi Api: " + String(nilaiapi == HIGH ? "Ya" : "Tidak"));
 }
-
