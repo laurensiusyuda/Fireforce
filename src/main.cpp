@@ -109,17 +109,12 @@ void loop() {
 
   //Output buzzer, Mengendalikan buzzer berdasarkan kondisi sensor
   if (nilaiapi == HIGH && jarak <= ambang_jarak_api && nilaippmgas > ambang_nilai_gas_berbahaya ) {
-    // Jika sensor api mendeteksi api, aktifkan buzzer
     digitalWrite(buzzerPin, HIGH);
   } else if (nilaiapi == LOW && nilaippmgas > ambang_nilai_gas_berbahaya) {
-    // Jika tidak ada deteksi api, namun konsentrasi gas berbahaya, aktifkan buzzer
     digitalWrite(buzzerPin, HIGH);
   } else {
-    // Untuk kondisi lain, matikan buzzer
     digitalWrite(buzzerPin, LOW);
   }
-  
-  // Tampilkan data pada serial print 
   Serial.println(nilaippmgas);
   Serial.println(nilaiADCgas);
   Serial.println("Deteksi Api: " + String(nilaiapi == HIGH ? "Ya" : "Tidak"));
