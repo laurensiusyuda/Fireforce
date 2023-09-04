@@ -1,4 +1,5 @@
 // TODO: Menambahkan fitur agar tidak ada delay dengan memberikan time interupt 
+// TODO: Menamnbahkan fitur buzzer on off jika terdeteksi api
 
 #include <Arduino.h>
 // lib lcd I2C
@@ -6,11 +7,12 @@
 #include <LiquidCrystal_I2C.h>
 
 // inisialiasai pin LCD 
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+LiquidCrystal_I2C lcd(0x27, 20, 4);
 
-// inisialiasai sensor gas, sensor api, dan sensor ultrasonik
+// inisialiasai sensor gas, sensor api, sensor ultrasonik, dan buzzer
 #define readsensorgas 32
 #define readsensorfire 4
+#define buzzerPin 5
 #define trigPin 2
 #define echoPin 3
 
@@ -28,20 +30,20 @@ float ambang_nilai_gas_berbahaya = 5000.0;
 // menentukan ambang batas jarak api
 float ambang_jarak_api = 20.0;
 
-// membuat fungsi milis
-bool flagEksekusiLCD = false;
-int halaman = 1;
-unsigned long waktuEksekusiLCD = 0;
-int timecounter = 0;
+//Deklarasi variabel dan flag
+bool flagEksekusiLCD = false; // Flag untuk menandakan waktu untuk mengganti halaman
+int halaman = 1; // Variabel untuk melacak halaman yang aktif
+unsigned long waktuEksekusiLCD = 0; // Variabel untuk melacak waktu terakhir tugas dijalankan
+int timecounter = 0; // Variabel untuk menghitung berapa kali tugas dijalankan
 
 // void setup
 void setup() {
   Serial.begin(9600);
   lcd.init();
   lcd.backlight();
-
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
+  pinMode(buzzerPin, OUTPUT);
 }
 
 //Read ADC sensor gas
@@ -79,72 +81,82 @@ float baca_nilai_api(){
 // Fungsi untuk timer interrupt
 void timerInterrupt() {
   if (millis() - waktuEksekusiLCD >= 1000) {
-    waktuEksekusiLCD = millis();
-    flagEksekusiLCD = true;
-    timecounter ++;
-
+    waktuEksekusiLCD = millis(); // Menyimpan waktu saat tugas dijalankan
+    flagEksekusiLCD = true; // Mengaktifkan flag untuk menandakan waktu untuk mengganti halaman
+    timecounter ++; // Menghitung berapa kali tugas dijalankan
     if (timecounter >= 5)
     {
-      timecounter = 0;
-      halaman ++;
-      if (halaman == 4)
+      timecounter = 0; // Mereset hitungan waktu jika sudah mencapai 5 detik
+      halaman ++; // Mengubah halaman
+      if (halaman == 3)
       {
-        halaman = 1;
+        halaman = 1; // Kembali ke halaman pertama jika mencapai halaman ke-3
       }
     }
   }
-  
 }
-
 
 // void loop
 void loop() {
+  // memanggil fungsi time interupt 
+  timerInterrupt();
+
   // variabel menampilkan nilai adc dan data sensor 
   float nilaiADCgas = baca_nilai_adc(readsensorgas);
   float nilaippmgas = baca_nilai_gas(nilaiADCgas);
   float nilaiapi = baca_nilai_api();
   float jarak = baca_jarak();
 
-  // tampilkan pada serial print 
-  Serial.println(nilaippmgas);
-  Serial.println(nilaiADCgas);
-  Serial.println("Deteksi Api: " + String(nilaiapi == HIGH ? "Ya" : "Tidak"));
-
-  // tampilkan pada lcd sensor gas (halaman 1)
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("ADC Gas: ");      
-  lcd.print(nilaiADCgas);
-  lcd.setCursor(0, 1);
-  lcd.print("Nilai PPM Gas: ");      
-  lcd.print(nilaippmgas);
-  delay(1000);
-
-  // tampilkan pada lcd sensor api dan sensor ultrasonik (halaman 2)
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("ADC Gas: ");      
-  lcd.print(nilaiADCgas);
-  lcd.setCursor(0, 1);
-  lcd.print("Nilai PPM Gas: ");      
-  lcd.print(nilaippmgas);
-  delay(1000);
-
-  // membuat pengkondisian
-  // Kondisi untuk mendeteksi konsentrasi gas LPG
-  if (nilaippmgas < ambang_nilai_gas_aman) {
-    Serial.println("Konsentrasi Gas Aman");
-  } else if (nilaippmgas < ambang_nilai_gas_normal) {
-    Serial.println("Konsentrasi Gas Normal");
-  } else if (nilaippmgas < ambang_nilai_gas_berbahaya) {
-    Serial.println("Konsentrasi Gas Berpotensi Bahaya");
-  } else {
-    Serial.println("Konsentrasi Gas Berbahaya");
+  // memanggil fungsi time interupt agar tidak mengganu proses dalam loop
+  if (flagEksekusiLCD == true)
+  {
+    flagEksekusiLCD = false;
+    // tampilkan pada lcd sensor gas (halaman 1)
+    if (halaman == 1)
+    {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("ADC Gas: ");      
+      lcd.print(nilaiADCgas);
+      lcd.setCursor(0, 1);
+      lcd.print("Nilai PPM Gas: ");      
+      lcd.print(nilaippmgas);
+      // Kondisi untuk mendeteksi konsentrasi gas LPG
+      if (nilaippmgas < ambang_nilai_gas_aman) 
+      {
+        lcd.print("Konsentrasi Gas Aman");
+        } 
+        else if (nilaippmgas < ambang_nilai_gas_normal)
+        {
+          lcd.print("Konsentrasi Gas Normal");
+          } 
+          else if (nilaippmgas < ambang_nilai_gas_berbahaya)
+          {
+            lcd.print("Konsentrasi Gas Berpotensi Bahaya");
+            } else 
+            {
+              lcd.print("Konsentrasi Gas Berbahaya");
+              }
+              }
+              // tampilkan pada lcd sensor api dan sensor ultrasonik (halaman 2)
+              else if (halaman == 2)
+              {
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("ADC Gas: ");      
+                lcd.print(nilaiADCgas);
+                lcd.setCursor(0, 1);
+                lcd.print("Nilai PPM Gas: ");      
+                lcd.print(nilaippmgas);
+                }
   }
+
+
 
   // membuat kondisi sensor api dengan sensor ultrasonik untuk mendetksi jarak api
   if (jarak < ambang_jarak_api && nilaiapi == HIGH) {
     Serial.println("Fire Detected at Close Range!");
+    digitalWrite(buzzerPin, HIGH);
     // Add actions or alarms for fire detection at close range here.
   } else if (nilaiapi == HIGH) {
     Serial.println("Fire Detected!");
@@ -153,60 +165,10 @@ void loop() {
     Serial.println("No Fire Detected");
   }
   delay(1000); // Delay for 1 second before checking again
+
+  // tampilkan pada serial print 
+  Serial.println(nilaippmgas);
+  Serial.println(nilaiADCgas);
+  Serial.println("Deteksi Api: " + String(nilaiapi == HIGH ? "Ya" : "Tidak"));
 }
 
-
-
-
-/*
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
-
-!Inisialisasi objek LiquidCrystal_I2C dengan alamat I2C yang sesuai
-LiquidCrystal_I2C lcd(0x27, 16, 2); // Sesuaikan dengan alamat LCD I2C Anda
-
-unsigned long previousMillis = 0;
-const unsigned long interval = 5000; // Interval perubahan data pada LCD dalam milidetik (5 detik)
-int currentPage = 1; // Menggunakan halaman 1 awalnya
-
-void setup() {
-  !Inisialisasi LCD
-  lcd.init();
-  lcd.backlight();
-  lcd.setCursor(0, 0);
-  lcd.print("Page 1: Data 1");
-
-  !Inisialisasi pin ADC (misalnya, A0)
-  pinMode(A0, INPUT);
-}
-
-void loop() {
-  unsigned long currentMillis = millis();
-
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;
-
-    !Setiap 5 detik, ganti data pada halaman tertentu
-    if (currentPage == 1) {
-      lcd.setCursor(0, 1);
-      lcd.print("       "); // Hapus data sebelumnya
-      lcd.setCursor(0, 1);
-      lcd.print("Data 2");
-
-    !Pindah ke halaman berikutnya setelah mengganti data
-      currentPage = 2;
-    } else if (currentPage == 2) {
-      lcd.setCursor(0, 1);
-      lcd.print("       "); // Hapus data sebelumnya
-      lcd.setCursor(0, 1);
-      lcd.print("Data 3");
-
-    !Kembali ke halaman pertama setelah mengganti data pada halaman terakhir
-      currentPage = 1;
-    }
-  }
-
-  !Kode di loop utama dapat berjalan tanpa delay yang mempengaruhi tampilan LCD
-}
-
-*/
